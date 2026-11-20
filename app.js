@@ -26,148 +26,16 @@ const BG = {
   Criminal: { icon: '🗝️', d: 'Contactos en los bajos fondos y destreza en cerraduras.' }
 };
 
-// Paleta D&D de colores de pelo
-const HAIR_PALETTE = [
-  { name: 'Negro Azabache', color: '#161413' },
-  { name: 'Castaño Ébano', color: '#332316' },
-  { name: 'Castaño Roble', color: '#57371f' },
-  { name: 'Castaño Avellana', color: '#7a4d29' },
-  { name: 'Rubio Miel', color: '#b8893d' },
-  { name: 'Rubio Dorado', color: '#d6a649' },
-  { name: 'Rubio Lino', color: '#ebd99b' },
-  { name: 'Pelirrojo Fuego', color: '#962b16' },
-  { name: 'Cobrizo Otoñal', color: '#b85423' },
-  { name: 'Ceniza', color: '#888888' },
-  { name: 'Plata Élfica', color: '#d8dee9' },
-  { name: 'Púrpura Brujo', color: '#5c276b' }
-];
+// Apariencia: el retrato es siempre una foto/imagen subida por el jugador (o ninguna, con placeholder)
+const DEFAULT_AP = { customPortrait: null };
 
-// Metadatos de Apariencia
-const CABEZAS = ['ninguno', 'casco', 'sombrero', 'corona', 'capucha'];
-const ARMAS = ['ninguno', 'espada', 'arco', 'baston', 'daga'];
-const PIEL_CATS = { piel: 16, elfo: 16, fantasia: 16 };
-const PELO_CATS = { mujer: 30, hombre: 32 };
-const DEFAULT_AP = { pielCat: 'piel', piel: 1, peloCat: 'mujer', pelo: 1, peloColor: '#57371f', cabeza: 'ninguno', arma: 'ninguno' };
-
-let ASSET_OFFSETS = {};
-async function loadOffsets() {
-  try {
-    const res = await fetch('assets/offsets.json');
-    if (res.ok) ASSET_OFFSETS = await res.json();
-  } catch (e) {
-    console.warn('Aviso: no se pudo cargar assets/offsets.json', e);
+// Devuelve el HTML del retrato: la imagen subida, o una ficha con iniciales si no hay ninguna
+function portraitHTML(ap, label) {
+  if (ap?.customPortrait) {
+    return `<img src="${ap.customPortrait}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block" onerror="this.style.display='none'">`;
   }
-}
-loadOffsets();
-
-function getAssetOffset(key) {
-  return ASSET_OFFSETS[key] || { x: 0, y: 0, scale: 1.0, layer: 'front' };
-}
-
-// ---- Motor de Tintado y Renderizado con Caché ----
-function hexToHsl(hex) {
-  const n = parseInt(hex.slice(1), 16), r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2; let h = 0, s = 0;
-  if (max !== min) { const d = max - min; s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    if (max === r) h = (g - b) / d + (g < b ? 6 : 0); else if (max === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h /= 6; }
-  return { h, s, l };
-}
-function hslToRgb(h, s, l) {
-  const hue2rgb = (p, q, t) => { t = ((t % 1) + 1) % 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
-  if (s === 0) { const v = Math.round(l * 255); return [v, v, v]; }
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
-  return [Math.round(hue2rgb(p, q, h + 1 / 3) * 255), Math.round(hue2rgb(p, q, h) * 255), Math.round(hue2rgb(p, q, h - 1 / 3) * 255)];
-}
-
-const rawImageCache = new Map();
-function loadRawImage(src) {
-  if (rawImageCache.has(src)) return rawImageCache.get(src);
-  const promise = new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-  rawImageCache.set(src, promise);
-  return promise;
-}
-
-const peloTintCache = new Map();
-function warmPeloTint(cat, i, color, suffix = '') {
-  const key = `${cat}/${i}${suffix}/${color}`;
-  if (peloTintCache.has(key)) return peloTintCache.get(key);
-  peloTintCache.set(key, null);
-
-  const src = `tex/pelo/${cat}/${i}${suffix}.png`;
-  loadRawImage(src).then(img => {
-    if (!img) { peloTintCache.set(key, ''); return; }
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth || 128;
-    canvas.height = img.naturalHeight || 168;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const px = imgData.data;
-    const { h: hh, s: ss0, l: ll0 } = hexToHsl(color);
-    const ll = Math.min(0.9, ll0 * 1.1), ss = Math.min(1, ss0 * 1.35 + 0.1);
-
-    for (let p = 0; p < px.length; p += 4) {
-      if (px[p + 3] === 0) continue;
-      const gray = (px[p] + px[p + 1] + px[p + 2]) / 3 / 255;
-      const centered = gray - 0.5;
-      const contrasted = Math.sign(centered) * Math.pow(Math.abs(centered), 0.95) * 0.9;
-      const lightness = Math.min(0.88, Math.max(0.04, contrasted + ll));
-      const satFalloff = 1 - Math.min(0.3, Math.max(0, Math.abs(lightness - ll) * 0.5));
-      const sat = Math.min(1, Math.max(0, ss * (0.82 + 0.18 * satFalloff) + 0.1));
-      const [r, g, b] = hslToRgb(hh, sat, lightness);
-      px[p] = r; px[p + 1] = g; px[p + 2] = b;
-    }
-    ctx.putImageData(imgData, 0, 0);
-    peloTintCache.set(key, canvas.toDataURL());
-    requestRerender();
-  });
-  return null;
-}
-
-let rerenderTimer = null;
-function requestRerender() {
-  if (rerenderTimer) return;
-  rerenderTimer = requestAnimationFrame(() => {
-    rerenderTimer = null;
-    try { renderAll(); } catch (e) {}
-    try { if (!modal.classList.contains('hidden')) updateCreator(); } catch (e) {}
-  });
-}
-
-function peloLayer(ap, suffix) {
-  const url = warmPeloTint(ap.peloCat, ap.pelo, ap.peloColor, suffix);
-  if (!url) return '';
-  const assetId = `pelo_${ap.peloCat}_${ap.pelo}${suffix}`;
-  const off = getAssetOffset(assetId);
-  const transform = (off.x !== 0 || off.y !== 0 || off.scale !== 1.0)
-    ? `transform:translate(${off.x}px,${off.y}px) scale(${off.scale});`
-    : '';
-  return `<img src="${url}" class="layer" draggable="false" alt="" style="${transform}" onerror="this.style.display='none'">`;
-}
-
-function tokenSprite(ap, size) {
-  ap = { ...DEFAULT_AP, ...ap };
-  const layer = (src, offKey) => {
-    const off = offKey ? getAssetOffset(offKey) : { x: 0, y: 0, scale: 1.0 };
-    const transform = (off.x !== 0 || off.y !== 0 || off.scale !== 1.0)
-      ? `transform:translate(${off.x}px,${off.y}px) scale(${off.scale});`
-      : '';
-    return `<img src="${src}" class="layer" draggable="false" alt="" style="${transform}" onerror="this.style.display='none'">`;
-  };
-  return `<span class="sprite" style="width:${size ? size + 'px' : '100%'};height:${size ? size + 'px' : '100%'}">`
-    + peloLayer(ap, '_back')
-    + layer(`tex/${ap.pielCat}/${ap.piel}.png`)
-    + peloLayer(ap, '')
-    + (ap.cabeza !== 'ninguno' ? layer(`tex/cabeza/${ap.cabeza}.png`, `cabeza_${ap.cabeza}`) : '')
-    + (ap.arma !== 'ninguno' ? layer(`tex/arma/${ap.arma}.png`, `arma_${ap.arma}`) : '')
-    + `</span>`;
+  const initials = esc((label || '?').slice(0, 2).toUpperCase());
+  return `<span style="display:grid;place-items:center;width:100%;height:100%;font-weight:900;color:var(--text-muted)">${initials}</span>`;
 }
 
 function build(d) {
@@ -257,7 +125,7 @@ function makeToken(t) {
   b.className = `token token-${t.type}${t.ap ? ' sprite-token' : ''}${state.selectedId === t.id ? ' selected' : ''}`;
   b.title = `${t.name} · Vida ${t.hp}/${t.maxHp}`; b.dataset.id = t.id; b.setAttribute('aria-label', esc(t.name));
   if (t.ap) {
-    b.innerHTML = tokenSprite(t.ap, 42);
+    b.innerHTML = portraitHTML(t.ap, t.label);
   } else if (t.id === 'goblin') {
     b.innerHTML = '<img src="tex/tokens/goblin.png" style="width:100%;height:100%;border-radius:50%;display:block" alt="Goblin">';
   } else if (t.id === 'wolf') {
@@ -445,7 +313,7 @@ $('#endTurnBtn').addEventListener('click', () => {
   if (state.phase === 'Derrota') { toast('La partida concluyó en derrota. Pulsa Deshacer o reinicia.'); return; }
   endTurn();
 });
-$$('.action-btn').forEach(b => b.addEventListener('click', () => startAction(b.dataset.action)));
+$$('[data-action]').forEach(b => b.addEventListener('click', () => startAction(b.dataset.action)));
 $('#toggleGridBtn').addEventListener('click', () => {
   state.gridVisible = !state.gridVisible;
   $('#toggleGridBtn').textContent = state.gridVisible ? 'Ocultar cuadrícula' : 'Mostrar cuadrícula';
@@ -467,8 +335,9 @@ function renderSheet() {
   const m = state.chMeta, p = currentPlayer();
   $('#sheetName').textContent = m?.nm || 'Sin nombre';
   $('#sheetIdentity').textContent = m ? `${m.sp} · ${m.cl} · ${m.bg || ''}` : 'Crea tu personaje para empezar';
-  $('#sheetApproved').style.display = m ? '' : 'none';
-  const port = $('#sheetPortrait'); port.innerHTML = m ? tokenSprite(m.ap) : '?';
+  const approved = $('#sheetApproved'); if (approved) approved.style.display = m ? '' : 'none';
+  const portFrame = $('#sheetPortraitFrame');
+  if (portFrame) portFrame.innerHTML = portraitHTML(m?.ap, m?.nm);
   if (p) {
     $('#sheetHp').textContent = `${p.hp} / ${p.maxHp}`;
     $('#sheetDefense').textContent = p.defense;
@@ -480,28 +349,27 @@ function renderSheet() {
   }
   $('#attackRow').innerHTML = m ? `<div style="display:flex;justify-content:space-between;font-size:0.85rem"><span>${esc(m.weapon)}</span><b style="color:var(--text-gold)">${sg(m.atk)} a impactar · 1d${m.dmgDie}${sg(m.dmgMod)}</b></div>` : '<div>—</div>';
   $('#compChips').innerHTML = m ? m.comp.map(c => `<span class="phase">${esc(c)}</span>`).join('') : '';
-  $('#sheetTags').innerHTML = state.tags.filter(t => t.status === 'confirmed').map(t => `<span class="phase" style="border-color:var(--green);color:#b7e5ca">${esc(t.name)}</span>`).join('');
+  const tagsEl = $('#sheetTags'); if (tagsEl) tagsEl.innerHTML = state.tags.filter(t => t.status === 'confirmed').map(t => `<span class="phase" style="border-color:var(--green);color:#b7e5ca">${esc(t.name)}</span>`).join('');
   $('#inventoryList').innerHTML = state.inventory.map(i => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border:1px solid var(--line);border-radius:8px">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface-alt);border:1px solid var(--panel-border);border-radius:8px">
       <span style="font-size:1.1rem;color:var(--gold)">${i.icon}</span>
-      <div style="flex:1"><strong>${esc(i.name)}</strong><span style="display:block;font-size:0.68rem;color:var(--muted)">${esc(i.detail)}</span></div>
-      <small style="color:var(--gold);font-family:var(--font-title)">×${i.qty}</small>
+      <div style="flex:1"><strong>${esc(i.name)}</strong><span style="display:block;font-size:0.68rem;color:var(--text-muted)">${esc(i.detail)}</span></div>
+      <small style="color:var(--gold)">×${i.qty}</small>
     </div>
-  `).join('') || '<div style="color:var(--muted);text-align:center;padding:12px">Mochila vacía.</div>';
+  `).join('') || '<div style="color:var(--text-muted);text-align:center;padding:12px">Mochila vacía.</div>';
 
   const atb = $('#activeTurnBox'), icon = $('#activeTurnIcon'), nameEl = $('#activeTurnName'), hint = $('#activeTurnHint');
   if (atb) {
     if (p) {
-      icon.innerHTML = m?.ap ? tokenSprite(m.ap, 38) : (m?.nm || 'PJ').slice(0, 2).toUpperCase();
+      icon.innerHTML = portraitHTML(m?.ap, p.name);
       nameEl.textContent = p.name;
       hint.textContent = p.acted ? 'Turno agotado · pulsa Terminar Turno' : `Acción disponible · ${p.hp}/${p.maxHp} PV`;
     } else {
       icon.textContent = '?'; nameEl.textContent = 'Sin personaje'; hint.textContent = 'Crea tu personaje en la pestaña Ficha.';
     }
   }
-  $('#roundNum').textContent = state.round;
-  $('#roundNum2').textContent = state.round;
-  $('#phasePill').textContent = state.phase;
+  const roundEl = $('#roundNum'); if (roundEl) roundEl.textContent = state.round;
+  renderAbilities();
 }
 
 function renderEncounter() {
@@ -570,192 +438,45 @@ $('#classCards').innerHTML = Object.keys(CL).map(k => `
   </label>
 `).join('');
 
-// 2. Cuadrícula de Especies y Trasfondos
-$('#speciesCards').innerHTML = Object.keys(SP).map(k => `
-  <label class="class-card">
-    <input type="radio" name="presetSpecies" value="${k}" ${draft.sp === k ? 'checked' : ''}>
-    <span class="class-icon">${SP[k].icon}</span>
-    <div class="class-info">
-      <b>${k}</b>
-      <p>${SP[k].bonus}</p>
-    </div>
-  </label>
-`).join('');
+// Especie y trasfondo usan los <select> existentes (#newSpecies/#newBackground) mas abajo.
+// La apariencia es siempre una foto subida (ver SECCIÓN 1 del modal) — sin piel/pelo seleccionables.
 
-$('#backgroundCards').innerHTML = Object.keys(BG).map(k => `
-  <label class="class-card">
-    <input type="radio" name="presetBackground" value="${k}" ${draft.bg === k ? 'checked' : ''}>
-    <span class="class-icon">${BG[k].icon}</span>
-    <div class="class-info">
-      <b>${k}</b>
-      <p>${BG[k].d}</p>
-    </div>
-  </label>
-`).join('');
+$('#classCards').addEventListener('change', e => { draft.cl = e.target.value; });
 
-// 3. Paleta de Colores de Pelo
-$('#hairPaletteGrid').innerHTML = HAIR_PALETTE.map(p => `
-  <button type="button" class="color-swatch-btn${draft.ap.peloColor.toLowerCase() === p.color.toLowerCase() ? ' sel' : ''}" data-color="${p.color}" title="${p.name}" style="background-color:${p.color}"></button>
-`).join('');
-
-// 4. Pestañas y Cuadrículas de Piel y Pelo
-const PIEL_CAT_LABELS = { piel: 'Piel Clásica', elfo: 'Élfico', fantasia: 'Fantasía' };
-$('#apPielTabs').innerHTML = Object.keys(PIEL_CATS).map(cat => `
-  <button type="button" class="tab-dnd${draft.ap.pielCat === cat ? ' sel' : ''}" data-cat="${cat}">${PIEL_CAT_LABELS[cat]}</button>
-`).join('');
-
-function renderPielSwatches() {
-  const n = PIEL_CATS[draft.ap.pielCat];
-  $('#apPielTabs').querySelectorAll('.tab-dnd').forEach(t => t.classList.toggle('sel', t.dataset.cat === draft.ap.pielCat));
-  $('#apPielSwatches').innerHTML = Array.from({ length: n }, (_, i) => i + 1).map(i => `
-    <button type="button" class="skin-card${draft.ap.piel === i ? ' sel' : ''}" data-i="${i}" style="background-image:url('tex/${draft.ap.pielCat}/${i}.png')" aria-label="Rostro ${i}"></button>
-  `).join('');
-}
-
-$('#apPeloTabs').innerHTML = Object.keys(PELO_CATS).map(cat => `
-  <button type="button" class="tab-dnd${draft.ap.peloCat === cat ? ' sel' : ''}" data-cat="${cat}">${cat === 'mujer' ? 'Dama (30)' : 'Caballero (32)'}</button>
-`).join('');
-
-function renderPeloSwatches() {
-  const n = PELO_CATS[draft.ap.peloCat];
-  $('#apPeloTabs').querySelectorAll('.tab-dnd').forEach(t => t.classList.toggle('sel', t.dataset.cat === draft.ap.peloCat));
-  $('#apPeloSwatches').innerHTML = Array.from({ length: n }, (_, i) => i + 1).map(i => `
-    <button type="button" class="hair-card${draft.ap.pelo === i ? ' sel' : ''}" data-i="${i}" data-num="${i}" style="background-image:url('tex/pelo/${draft.ap.peloCat}/${i}.png')" aria-label="Peinado ${i}"></button>
-  `).join('');
-}
-
-$('#apCabeza').innerHTML = CABEZAS.map(k => `<option value="${k}">${k === 'ninguno' ? 'Sin Accesorio de Cabeza' : '🪖 ' + k[0].toUpperCase() + k.slice(1)}</option>`).join('');
-$('#apArma').innerHTML = ARMAS.map(k => `<option value="${k}">${k === 'ninguno' ? 'Sin Arma en Mano' : '⚔️ ' + k[0].toUpperCase() + k.slice(1)}</option>`).join('');
-
-function updateCreator() {
-  $$('.creator-step').forEach(s => s.style.display = +s.dataset.step === state.creatorStep ? 'block' : 'none');
-  $$('.step').forEach(s => {
-    const stepNum = +s.dataset.stepIndicator;
-    s.classList.toggle('active', stepNum <= state.creatorStep);
-  });
-  $('#stepCounter').textContent = `Paso ${state.creatorStep} de 4`;
-  $('#prevStepBtn').disabled = state.creatorStep === 1;
-  $('#nextStepBtn').classList.toggle('hidden', state.creatorStep === 4);
-  $('#finishCreatorBtn').classList.toggle('hidden', state.creatorStep !== 4);
-  draft.nm = $('#newName').value;
-  $('#apPreview').innerHTML = tokenSprite(draft.ap);
-  if (state.creatorStep === 4) {
-    const b = build(draft);
-    $('#reviewName').textContent = b.nm || 'Héroe sin nombre';
-    $('#reviewDetails').textContent = `${b.sp} · ${b.cl} (${b.bg || 'Aventurero'})`;
-    $('#reviewPortrait').innerHTML = tokenSprite(b.ap);
-    $('#reviewStats').innerHTML = `
-      <li>✓ ${b.pv} Puntos de Vida iniciales · CA ${b.ca}</li>
-      <li>✓ Arma: ${esc(b.weapon)} (${sg(b.atk)} al impacto · 1d${b.dmgDie}${sg(b.dmgMod)} daño)</li>
-      <li>✓ Competente en: ${b.comp.join(', ')}</li>
-      <li>✓ Rasgos de Linaje: ${SP[b.sp]?.bonus || 'Estándar'}</li>
-    `;
-  }
-}
-
-function openCreator() { state.creatorStep = 1; modal.classList.remove('hidden'); updateCreator(); }
-$('#openCreatorBtn').addEventListener('click', openCreator);
-$('#closeCreatorBtn').addEventListener('click', () => modal.classList.add('hidden'));
-modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
-
-$('#nextStepBtn').addEventListener('click', () => { if (state.creatorStep < 4) { state.creatorStep++; updateCreator(); } });
-$('#prevStepBtn').addEventListener('click', () => { if (state.creatorStep > 1) { state.creatorStep--; updateCreator(); } });
-$('#newName').addEventListener('input', updateCreator);
-
-$('#classCards').addEventListener('change', e => {
-  draft.cl = e.target.value;
-  updateCreator();
-});
-$('#speciesCards').addEventListener('change', e => {
-  draft.sp = e.target.value;
-  updateCreator();
-});
-$('#backgroundCards').addEventListener('change', e => {
-  draft.bg = e.target.value;
-  updateCreator();
-});
-
-// Eventos de Apariencia
-$('#hairPaletteGrid').addEventListener('click', e => {
-  const btn = e.target.closest('.color-swatch-btn');
-  if (!btn) return;
-  const col = btn.dataset.color;
-  draft.ap.peloColor = col;
-  $('#apPelo').value = col;
-  $$('.color-swatch-btn').forEach(b => b.classList.toggle('sel', b === btn));
-  updateCreator();
-});
-
-let colorDebounce = null;
-$('#apPelo').addEventListener('input', e => {
-  draft.ap.peloColor = e.target.value;
-  $$('.color-swatch-btn').forEach(b => b.classList.toggle('sel', b.dataset.color?.toLowerCase() === e.target.value.toLowerCase()));
-  clearTimeout(colorDebounce);
-  colorDebounce = setTimeout(() => updateCreator(), 30);
-});
-
-$('#apPielTabs').addEventListener('click', e => {
-  const t = e.target.closest('.tab-dnd');
-  if (!t) return;
-  draft.ap.pielCat = t.dataset.cat;
-  draft.ap.piel = 1;
-  renderPielSwatches();
-  updateCreator();
-});
-$('#apPielSwatches').addEventListener('click', e => {
-  const b = e.target.closest('.skin-card');
-  if (!b) return;
-  draft.ap.piel = +b.dataset.i;
-  $$('.skin-card').forEach(c => c.classList.toggle('sel', c === b));
-  updateCreator();
-});
-
-$('#apPeloTabs').addEventListener('click', e => {
-  const t = e.target.closest('.tab-dnd');
-  if (!t) return;
-  draft.ap.peloCat = t.dataset.cat;
-  draft.ap.pelo = 1;
-  renderPeloSwatches();
-  updateCreator();
-});
-$('#apPeloSwatches').addEventListener('click', e => {
-  const b = e.target.closest('.hair-card');
-  if (!b) return;
-  draft.ap.pelo = +b.dataset.i;
-  $$('.hair-card').forEach(c => c.classList.toggle('sel', c === b));
-  updateCreator();
-});
-
-$('#apCabeza').addEventListener('change', e => { draft.ap.cabeza = e.target.value; updateCreator(); });
-$('#apArma').addEventListener('change', e => { draft.ap.arma = e.target.value; updateCreator(); });
-
-$('#apPelo').value = draft.ap.peloColor;
-renderPielSwatches();
-renderPeloSwatches();
-
+// ---- CREATOR FORM SUBMIT ----
 $('#creatorForm').addEventListener('submit', e => {
   e.preventDefault();
-  const name = $('#newName').value.trim() || 'Aventurero Legendario';
-  draft.nm = name;
+  const name = ($('#newName')?.value || '').trim() || 'Aventurero Legendario';
+  const sp = $('#newSpecies')?.value || draft.sp || 'Humano';
+  const bg = $('#newBackground')?.value || draft.bg || 'Soldado';
+  draft.nm = name; draft.sp = sp; draft.bg = bg;
+
+  // If portrait was loaded from file/URL/preset, attach to ap (only when actually shown)
+  const prevImg = $('#creatorPreviewImg');
+  if (prevImg?.src && prevImg.style.display !== 'none' && (prevImg.src.startsWith('data:') || prevImg.src.startsWith('http'))) {
+    draft.ap.customPortrait = prevImg.src;
+  } else {
+    draft.ap.customPortrait = null;
+  }
+
   snapshot();
   const built = build(draft);
+  built.ap = { ...draft.ap }; // keep customPortrait
   state.chMeta = built;
   let pj = currentPlayer();
 
   let spawnX = 2, spawnY = 6;
   if (!validCell(spawnX, spawnY, 'pj') || tokenAt(spawnX, spawnY)) {
-    for (let y = 1; y <= BOARD_H; y++) {
-      for (let x = 1; x <= BOARD_W; x++) {
-        if (validCell(x, y, 'pj') && !tokenAt(x, y)) { spawnX = x; spawnY = y; break; }
+    outer: for (let sy = 1; sy <= BOARD_H; sy++) {
+      for (let sx = 1; sx <= BOARD_W; sx++) {
+        if (validCell(sx, sy, 'pj') && !tokenAt(sx, sy)) { spawnX = sx; spawnY = sy; break outer; }
       }
-      if (validCell(spawnX, spawnY, 'pj') && !tokenAt(spawnX, spawnY)) break;
     }
   }
-
   if (!pj) { pj = { id: 'pj', x: spawnX, y: spawnY, acted: false }; state.tokens.push(pj); }
   pj.name = name; pj.label = name.slice(0, 2).toUpperCase(); pj.type = 'player'; pj.ap = built.ap;
-  pj.maxHp = built.pv; pj.hp = Math.min(pj.hp ?? built.pv, built.pv) || built.pv; pj.defense = built.ca;
-  pj.attackBonus = built.atk; pj.damage = `1d${built.dmgDie}${sg(built.dmgMod)}`;
+  pj.maxHp = built.pv; pj.hp = Math.min(pj.hp ?? built.pv, built.pv) || built.pv;
+  pj.defense = built.ca; pj.attackBonus = built.atk; pj.damage = `1d${built.dmgDie}${sg(built.dmgMod)}`;
 
   if (!state.inventory.length) {
     state.inventory = [
@@ -763,7 +484,7 @@ $('#creatorForm').addEventListener('submit', e => {
       { icon: '✚', name: 'Poción de curación', detail: 'Restaura 2d4+2 PV', qty: 2 }
     ];
   }
-  modal.classList.add('hidden');
+  $('#creatorModal').classList.add('hidden');
   addLog(`<strong>${esc(name)}</strong> ha entrado en la crónica de las ruinas.`);
   toast('¡Héroe consagrado y listo para la batalla!');
   switchView('characters');
@@ -771,204 +492,252 @@ $('#creatorForm').addEventListener('submit', e => {
   saved();
 });
 
-// Entidades del Director
-$('#entityForm').addEventListener('submit', e => {
+// ---- ENTITY FORM (DIRECTOR) ----
+$('#entityForm')?.addEventListener('submit', e => {
   e.preventDefault();
-  const name = $('#entityName').value.trim(),
-    label = $('#entityLabel').value.trim().slice(0, 2).toUpperCase(),
-    type = $('#entityType').value,
-    x = Math.max(1, Math.min(BOARD_W, +$('#entityX').value)),
-    y = Math.max(1, Math.min(BOARD_H, +$('#entityY').value)),
-    hp = Math.max(1, +$('#entityHp').value),
-    def = Math.max(0, +$('#entityDef').value),
-    atkb = +$('#entityAtk').value,
-    dmg = $('#entityDmg').value.trim();
-
-  if (!name || !label || blocked.has(key(x, y)) || tokenAt(x, y)) {
-    toast('No se puede colocar en esa baldosa.'); return;
-  }
+  const name = $('#entityName')?.value.trim() || '';
+  const label = ($('#entityLabel')?.value.trim() || '').slice(0, 2).toUpperCase();
+  const type = $('#entityType')?.value || 'enemy';
+  const x = Math.max(1, Math.min(BOARD_W, +($('#entityX')?.value) || 7));
+  const y = Math.max(1, Math.min(BOARD_H, +($('#entityY')?.value) || 3));
+  const hp = Math.max(1, +($('#entityHp')?.value) || 12);
+  const def = Math.max(0, +($('#entityDef')?.value) || 12);
+  const atkb = +($('#entityAtk')?.value) || 3;
+  const dmg = ($('#entityDmg')?.value || '').trim() || '1d6+1';
+  if (!name || !label || blocked.has(key(x, y)) || tokenAt(x, y)) { toast('No se puede colocar en esa baldosa.'); return; }
   snapshot();
-  state.tokens.push({
-    id: `entity-${Date.now()}`,
-    name, label, type, x, y, hp, maxHp: hp, defense: def,
-    attackBonus: atkb, damage: dmg || '1d6+1', acted: false
-  });
+  state.tokens.push({ id: `entity-${Date.now()}`, name, label, type, x, y, hp, maxHp: hp, defense: def, attackBonus: atkb, damage: dmg, acted: false });
   addLog(`<strong>${esc(name)}</strong> apareció en [${x},${y}].`);
-  renderAll();
-  e.target.reset();
-  toast('Entidad manifestada en el tablero.');
-  saved();
+  renderAll(); e.target.reset(); toast('Entidad manifestada en el tablero.'); saved();
 });
 
-$('#proposalList').addEventListener('click', e => {
-  const a = e.target.closest('[data-approve]'), r = e.target.closest('[data-reject]'), id = a?.dataset.approve || r?.dataset.reject;
-  if (!id) return;
+// ---- PROPOSALS / NARRATIVE / LOG ----
+$('#proposalList')?.addEventListener('click', e => {
+  const a = e.target.closest('[data-approve]'), r = e.target.closest('[data-reject]');
+  const id = a?.dataset.approve || r?.dataset.reject; if (!id) return;
   const p = state.proposals.find(x => x.id === id);
   state.proposals = state.proposals.filter(x => x.id !== id);
-  if (a) {
-    state.tags.push({ id: `tag-${Date.now()}`, name: p.tagName, value: p.tagName.toLowerCase().replaceAll(' ', '-'), status: 'confirmed' });
-    addLog(`<strong>${esc(p.tagName)}</strong> fue ratificada por el Director.`);
-  } else {
-    addLog(`<strong>${esc(p.tagName)}</strong> fue descartada.`);
-  }
+  if (a && p) { state.tags.push({ id: `tag-${Date.now()}`, name: p.tagName, value: p.tagName.toLowerCase().replaceAll(' ', '-'), status: 'confirmed' }); addLog(`<strong>${esc(p.tagName)}</strong> ratificada.`); }
+  else if (p) addLog(`<strong>${esc(p.tagName)}</strong> descartada.`);
   renderAll(); saved();
 });
+$('#narrativeForm')?.addEventListener('submit', e => { e.preventDefault(); const text = $('#narrativeInput')?.value.trim(); if (!text) { toast('Escribe algo antes.'); return; } addLog(`<strong>Relato:</strong> ${esc(text)}`); if ($('#narrativeInput')) $('#narrativeInput').value = ''; toast('Narración inscrita.'); saved(); });
+$('#clearLogBtn')?.addEventListener('click', () => { state.log = []; renderLogs(); saved(); });
+$('#undoBtn')?.addEventListener('click', () => { const h = state.history.pop(); if (!h) { toast('No hay acciones para revertir.'); return; } Object.assign(state, h); renderAll(); toast('Acción revertida.'); saved(); });
+$('#clearTokensBtn')?.addEventListener('click', () => { snapshot(); state.tokens = state.tokens.filter(t => ['pj','goblin','wolf','chest'].includes(t.id)); renderAll(); toast('Criaturas eliminadas.'); saved(); });
+$('#exportBtn')?.addEventListener('click', () => { const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `cronica-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); toast('Crónica exportada.'); });
+$('#helpBtn')?.addEventListener('click', () => toast('Mueve tu ficha a casillas libres, ataca enemigos adyacentes y concluye tu turno.'));
 
-$('#narrativeForm').addEventListener('submit', e => {
-  e.preventDefault();
-  const text = $('#narrativeInput').value.trim();
-  if (!text) { toast('Escribe una narración antes de inscribirla.'); return; }
-  addLog(`<strong>Relato:</strong> ${esc(text)}`);
-  $('#narrativeInput').value = '';
-  toast('Crónica narrativa registrada.');
-  saved();
-});
-
-$('#clearLogBtn').addEventListener('click', () => { state.log = []; renderLogs(); saved(); });
-$('#undoBtn').addEventListener('click', () => {
-  const h = state.history.pop();
-  if (!h) { toast('No hay acciones para revertir.'); return; }
-  Object.assign(state, h);
-  renderAll();
-  toast('Acción revertida en el tiempo.');
-  saved();
-});
-
-$('#clearTokensBtn').addEventListener('click', () => {
-  snapshot();
-  state.tokens = state.tokens.filter(t => ['pj', 'goblin', 'wolf', 'chest'].includes(t.id));
-  renderAll();
-  toast('Criaturas eliminadas.');
-  saved();
-});
-
-$('#exportBtn').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = 'cronica-partida.json'; a.click();
-  URL.revokeObjectURL(url);
-  toast('Crónica exportada.');
-});
-
-$('#helpBtn').addEventListener('click', () => toast('Mueve tu ficha a casillas libres, ataca enemigos adyacentes y concluye tu turno.'));
-
-// ---- Supabase Sync con Respaldo Offline ----
-const cfg = window.DND_CONFIG || {};
-const cloud = (cfg.supabaseUrl && window.supabase) ? supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey) : null;
-let me = null, campaignId = localStorage.getItem('lastCampaignId') || null, knownVersion = null;
-
-function renderAcct() {
-  const el = $('#acctLabel');
-  if (el) el.textContent = me ? (me.is_anonymous ? 'Aventurero Invitado' : me.email) : 'Sin sesión';
-}
-
-async function ensureSignedIn() {
-  if (!cloud) return null;
-  try {
-    const { data: { user } } = await cloud.auth.getUser();
-    if (user) { me = user; renderAcct(); return user; }
-    const { data, error } = await cloud.auth.signInAnonymously();
-    if (!error && data?.user) { me = data.user; renderAcct(); return me; }
-  } catch (e) {
-    console.warn('Aviso: modo local activo sin Supabase.', e);
-  }
-  return null;
-}
-
-$('#emailBtn').addEventListener('click', async () => {
-  if (!cloud) { toast('Nube no disponible.'); return; }
-  const email = prompt('Correo para recuperar tu campaña:');
-  if (!email) return;
-  try {
-    const { error } = await cloud.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin } });
-    if (error) throw error;
-    toast('Enlace enviado a tu correo.');
-  } catch (e) {
-    console.error(e);
-    toast('No se pudo enviar el enlace.');
-  }
-});
-
-async function guardarPartidaEnLaNube() {
-  persistLocal();
-  if (!cloud) return;
-  const user = await ensureSignedIn();
-  if (!user) return;
-
-  try {
-    if (campaignId && knownVersion != null) {
-      const { data: current, error: verErr } = await cloud.from('campaigns').select('version').eq('id', campaignId).single();
-      if (!verErr && current && current.version !== knownVersion) {
-        toast('Campaña modificada en otro dispositivo.');
-        return;
-      }
-    }
-    const nextVersion = (knownVersion || 0) + 1;
-    const payload = { owner_id: user.id, name: state.chMeta?.nm || 'Partida sin nombre', state, version: nextVersion, updated_at: new Date().toISOString() };
-    const { data, error } = await cloud.from('campaigns').upsert(campaignId ? { ...payload, id: campaignId } : payload, { onConflict: 'id' }).select().single();
-    if (error) throw error;
-    campaignId = data.id;
-    knownVersion = data.version;
-    localStorage.setItem('lastCampaignId', campaignId);
-    toast('Campaña resguardada en la nube.');
-  } catch (e) {
-    console.warn('Guardado en nube diferido (copia local protegida):', e);
-  }
-}
-
-async function cargarPartidaDesdeLaNube(id) {
-  if (!cloud) { toast('Nube no disponible.'); return; }
-  const user = await ensureSignedIn();
-  if (!user) { toast('Inicia sesión para descargar.'); return; }
-
-  const { data, error } = await cloud.from('campaigns').select('id,state,version,updated_at').eq('id', id).single();
-  if (error) throw error;
-  campaignId = data.id;
-  knownVersion = data.version;
-  state = data.state;
-  localStorage.setItem('lastCampaignId', campaignId);
-  renderAll();
-  toast(`Campaña cargada (${new Date(data.updated_at).toLocaleString('es-MX')}).`);
-}
-
-let saveTimer;
+// ---- LOCAL-FIRST SAVE (no Supabase email required) ----
+let saveTimer2;
 function programarGuardado() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    guardarPartidaEnLaNube().catch(e => console.error('Auto-guardado:', e));
-  }, 1200);
+  clearTimeout(saveTimer2);
+  saveTimer2 = setTimeout(() => {
+    persistLocal();
+    const st = $('#saveText');
+    if (st) { st.textContent = '✓ Guardado'; setTimeout(() => { if (st) st.textContent = 'Guardado en PC'; }, 2000); }
+  }, 800);
 }
 
-$('#saveBtn').addEventListener('click', async () => {
+// ===== NEW FEATURES: APPENDED AFTER ORIGINAL HANDLERS =====
+// Photo upload, role toggles, dice modal, party menu
+
+// ---- PORTRAIT HELPERS ----
+function applyPortraitToPreview(url) {
+  const prevImg = document.querySelector('#creatorPreviewImg');
+  if (!prevImg) return;
+  prevImg.src = url;
+  prevImg.style.display = '';
+  const placeholder = document.querySelector('#creatorPreviewPlaceholder');
+  if (placeholder) placeholder.style.display = 'none';
+  if (!draft.ap) draft.ap = { ...DEFAULT_AP };
+  draft.ap.customPortrait = url;
+}
+
+function loadPortraitFromFile(file) {
+  if (!file || !file.type.startsWith('image/')) { toast('Solo se aceptan imágenes (PNG, JPG, WebP).'); return; }
+  if (file.size > 8 * 1024 * 1024) { toast('Imagen muy grande (máx. 8 MB).'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    applyPortraitToPreview(ev.target.result);
+    toast('✓ Retrato cargado. ¡Perfecto!');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---- DRAG & DROP + FILE INPUT ----
+(function() {
+  const dz = document.querySelector('#uploadDropzone');
+  const fi = document.querySelector('#portraitFileInput');
+  if (!dz || !fi) return;
+  dz.addEventListener('click', () => fi.click());
+  fi.addEventListener('change', e => { if (e.target.files[0]) loadPortraitFromFile(e.target.files[0]); });
+  ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
+  ['dragleave','dragend'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('drag-over')));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) loadPortraitFromFile(e.dataTransfer.files[0]);
+  });
+})();
+
+// ---- URL INPUT ----
+(function() {
+  const btn = document.querySelector('#applyUrlBtn');
+  const inp = document.querySelector('#portraitUrlInput');
+  if (!btn || !inp) return;
+  btn.addEventListener('click', () => {
+    const url = inp.value.trim();
+    if (!url || !/^https?:\/\//i.test(url)) { toast('Pega una URL válida (https://...).'); return; }
+    applyPortraitToPreview(url);
+    inp.value = '';
+    toast('Retrato cargado desde URL.');
+  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+})();
+
+// ---- ROL Y MODO DE JUEGO ----
+const appMode = { role: 'player', exp: 'novice' };
+
+function applyRoleMode() {
+  const isDM = appMode.role === 'dm';
+  const isNovice = appMode.exp === 'novice';
+  const dmNav = document.querySelector('#directorNavBtn');
+  if (dmNav) dmNav.style.display = isDM ? '' : 'none';
+  const helpTxt = document.querySelector('#tableHelpText');
+  if (helpTxt) helpTxt.style.display = isNovice ? '' : 'none';
+  document.querySelector('#rolePlayerBtn')?.classList.toggle('active', !isDM);
+  document.querySelector('#roleDmBtn')?.classList.toggle('active', isDM);
+  document.querySelector('#expNoviceBtn')?.classList.toggle('active', isNovice);
+  document.querySelector('#expExpertBtn')?.classList.toggle('active', !isNovice);
+}
+
+document.querySelector('#rolePlayerBtn')?.addEventListener('click', () => { appMode.role = 'player'; applyRoleMode(); toast('Modo Jugador.'); });
+document.querySelector('#roleDmBtn')?.addEventListener('click', () => { appMode.role = 'dm'; applyRoleMode(); toast('Modo Dungeon Master.'); });
+document.querySelector('#expNoviceBtn')?.addEventListener('click', () => { appMode.exp = 'novice'; applyRoleMode(); toast('Modo Guiado activado.'); });
+document.querySelector('#expExpertBtn')?.addEventListener('click', () => { appMode.exp = 'expert'; applyRoleMode(); toast('Modo Experto activado.'); });
+
+applyRoleMode();
+
+// ---- DADOS MODAL ----
+(function() {
+  const diceModal = document.querySelector('#diceModal');
+  if (!diceModal) return;
+  document.querySelector('#openDiceBtn')?.addEventListener('click', () => diceModal.classList.toggle('hidden'));
+  document.querySelector('#closeDiceBtn')?.addEventListener('click', () => diceModal.classList.add('hidden'));
+  diceModal.addEventListener('click', e => { if (e.target === diceModal) diceModal.classList.add('hidden'); });
+
+  document.querySelectorAll('.dice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sides = +btn.dataset.sides;
+      let result;
+      if (sides === 100) {
+        result = (Math.floor(Math.random() * 10) * 10) + (Math.floor(Math.random() * 10));
+        if (result === 0) result = 100;
+      } else {
+        result = Math.floor(Math.random() * sides) + 1;
+      }
+      const numEl = document.querySelector('#diceResultNum');
+      const descEl = document.querySelector('#diceResultDesc');
+      if (numEl) {
+        numEl.textContent = result;
+        numEl.style.transform = 'scale(1.5)';
+        setTimeout(() => { if (numEl) numEl.style.transform = ''; }, 220);
+      }
+      if (descEl) descEl.textContent = `d${sides === 100 ? '%' : sides} → ${result}`;
+      addLog(`🎲 d${sides === 100 ? '100' : sides}: <strong>${result}</strong>`);
+      saved();
+    });
+  });
+})();
+
+// ---- PARTY MENU (OPCIONES) ----
+(function() {
+  const partyBtn = document.querySelector('#partyMenuBtn');
+  if (!partyBtn) return;
+  partyBtn.addEventListener('click', () => {
+    if (document.querySelector('#_pm_menu')) { document.querySelector('#_pm_menu').remove(); return; }
+    const menu = document.createElement('div');
+    menu.id = '_pm_menu';
+    menu.style.cssText = 'position:fixed;top:70px;right:20px;z-index:500;background:var(--panel-bg);border:2px solid var(--panel-border);border-radius:12px;padding:12px;min-width:230px;box-shadow:0 16px 48px rgba(0,0,0,.9);display:grid;gap:8px';
+    menu.innerHTML = `
+      <strong style="font-family:var(--font-dnd);font-size:.78rem;color:var(--gold-bright);padding-bottom:8px;border-bottom:1px solid var(--panel-border)">⚙️ Opciones de Partida</strong>
+      <button class="btn ghost full" id="_pm_export">⇩ Exportar partida (JSON)</button>
+      <label class="btn ghost full" style="cursor:pointer;text-align:center;margin:0">⇧ Cargar partida (JSON)<input type="file" accept=".json" id="_pm_import" style="display:none"></label>
+      <hr style="border:0;border-top:1px solid var(--panel-border);margin:0">
+      <button class="btn danger full" id="_pm_restart">⚠ Reiniciar aventura</button>
+      <button class="btn ghost full" id="_pm_close" style="font-size:.74rem;color:var(--text-muted)">Cerrar</button>
+    `;
+    document.body.appendChild(menu);
+    menu.querySelector('#_pm_export').onclick = () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = `cronica-${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url); toast('Crónica exportada.'); menu.remove();
+    };
+    menu.querySelector('#_pm_import').onchange = e => {
+      const f = e.target.files[0]; if (!f) return;
+      const r2 = new FileReader();
+      r2.onload = ev => {
+        try { const loaded = JSON.parse(ev.target.result); if (!loaded.tokens) throw 0; Object.assign(state, loaded); renderAll(); toast('¡Partida cargada!'); saved(); }
+        catch { toast('Archivo inválido.'); }
+      };
+      r2.readAsText(f); menu.remove();
+    };
+    menu.querySelector('#_pm_restart').onclick = () => {
+      if (confirm('⚠ ¿Reiniciar toda la aventura? El progreso se perderá.')) {
+        state = clone(defaultState); localStorage.removeItem('manitasRpgState'); renderAll(); openCreatorModal(); toast('Nueva aventura iniciada.');
+      }
+      menu.remove();
+    };
+    menu.querySelector('#_pm_close').onclick = () => menu.remove();
+    setTimeout(() => document.addEventListener('click', function oc(ev) {
+      if (!menu.contains(ev.target) && ev.target !== partyBtn) { menu.remove(); document.removeEventListener('click', oc); }
+    }), 80);
+  });
+})();
+
+// ---- REINICIAR desde panel Director ----
+document.querySelector('#restartGameBtn')?.addEventListener('click', () => {
+  if (confirm('⚠ ¿Reiniciar la aventura completa?')) {
+    state = clone(defaultState); localStorage.removeItem('manitasRpgState'); renderAll(); openCreatorModal(); toast('Nueva aventura iniciada.');
+  }
+});
+
+// ---- EDITAR HÉROE ----
+document.querySelector('#editHeroBtn')?.addEventListener('click', () => {
+  if (state.chMeta) {
+    draft = { cl: state.chMeta.cl, sp: state.chMeta.sp, bg: state.chMeta.bg, nm: state.chMeta.nm, ap: { ...state.chMeta.ap } };
+    const nameEl = document.querySelector('#newName'); if (nameEl) nameEl.value = draft.nm;
+    const spEl = document.querySelector('#newSpecies'); if (spEl) spEl.value = draft.sp;
+    const bgEl = document.querySelector('#newBackground'); if (bgEl) bgEl.value = draft.bg;
+    const clRadio = document.querySelector(`input[name="presetClass"][value="${draft.cl}"]`); if (clRadio) clRadio.checked = true;
+    if (draft.ap.customPortrait) applyPortraitToPreview(draft.ap.customPortrait);
+  }
+  openCreatorModal();
+});
+
+// ---- OPEN/CLOSE CREATOR MODAL (safe, no duplicate listener) ----
+function openCreatorModal() {
+  const m = document.querySelector('#creatorModal');
+  if (!m) return;
+  m.classList.remove('hidden');
+}
+
+document.querySelector('#openCreatorBtn')?.addEventListener('click', openCreatorModal);
+document.querySelector('#closeCreatorBtn')?.addEventListener('click', () => document.querySelector('#creatorModal')?.classList.add('hidden'));
+document.querySelector('#cancelCreatorBtn')?.addEventListener('click', () => document.querySelector('#creatorModal')?.classList.add('hidden'));
+document.querySelector('#creatorModal')?.addEventListener('click', e => { if (e.target.id === 'creatorModal') e.target.classList.add('hidden'); });
+document.querySelector('#newSpecies')?.addEventListener('change', e => { draft.sp = e.target.value; });
+document.querySelector('#newBackground')?.addEventListener('change', e => { draft.bg = e.target.value; });
+
+// ---- SAVE INDICATOR ----
+const _origSaved = typeof saved === 'function' ? saved : () => {};
+function saved() {
   persistLocal();
-  if (cloud) {
-    try { await guardarPartidaEnLaNube(); }
-    catch (e) { toast('Guardado en almacenamiento local.'); }
-  } else {
-    toast('Guardado en almacenamiento local.');
-  }
-});
+  programarGuardado();
+}
 
-$('#loadBtn').addEventListener('click', async () => {
-  if (!campaignId) { toast('No hay campaña remota guardada.'); return; }
-  try { await cargarPartidaDesdeLaNube(campaignId); }
-  catch (e) { console.error(e); toast('No se pudo cargar la partida.'); }
-});
-
-$('#newGameBtn').addEventListener('click', () => {
-  if (confirm('¿Comenzar nueva campaña? El héroe actual se perderá si no lo guardaste.')) {
-    state = clone(defaultState);
-    campaignId = null;
-    knownVersion = null;
-    localStorage.removeItem('lastCampaignId');
-    renderAll();
-    openCreator();
-    toast('Nueva campaña iniciada.');
-  }
-});
-
-// Inicialización de la aplicación
-state.creatorStep = 1;
+// Kickoff
 renderAll();
-if (!state.chMeta) openCreator();
-ensureSignedIn().then(renderAcct).catch(() => renderAcct());
+if (!state.chMeta) openCreatorModal();
