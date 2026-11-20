@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Calibrador de Pelo Individual (Pixel-Perfect)</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;background:#10141c;color:#f0f3f7;font-family:system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:16px;padding:16px}
+  .panel{background:#171d27;border:1px solid #303c4f;border-radius:12px;padding:14px;min-width:270px;max-width:340px}
+  h1{font-size:1rem;margin:0 0 10px;color:#d8a05a}
+  label{display:block;font-size:.75rem;color:#96a3b5;margin:10px 0 4px}
+  input[type=file]{width:100%;font-size:.75rem}
+  input[type=range]{width:100%;accent-color:#d8a05a}
+  .row{display:flex;gap:8px;align-items:center}
+  .row span{font-size:.75rem;color:#d8a05a;min-width:48px;text-align:right;font-variant-numeric:tabular-nums}
+  #stageWrap{display:flex;justify-content:center;align-items:center;background:#0b0e14;border-radius:10px;padding:12px;border:1px solid #303c4f}
+  #stage{position:relative;width:307px;height:403px;background:
+    repeating-conic-gradient(#242b38 0% 25%, #1b212c 0% 50%) 50% / 20px 20px;
+    overflow:hidden;border:1px solid #303c4f}
+  #stage canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges}
+  #wigList{display:grid;grid-template-columns:repeat(4, 1fr);gap:6px;margin-top:8px;max-height:240px;overflow-y:auto}
+  #wigList button{aspect-ratio:1;padding:2px;border:2px solid #303c4f;border-radius:6px;background:#1e2633;cursor:pointer;position:relative}
+  #wigList button.sel{border-color:#d8a05a;background:#2a3446}
+  #wigList button.edited::after{content:"✓";position:absolute;top:2px;right:4px;font-size:10px;color:#4ade80;font-weight:bold}
+  #wigList img{width:100%;height:100%;object-fit:contain;display:block;image-rendering:pixelated}
+  .btn{margin-top:10px;width:100%;padding:10px;border:0;border-radius:8px;background:#d8a05a;color:#23180d;font-weight:800;cursor:pointer;font-size:.8rem}
+  .btn.sec{background:#283244;color:#f0f3f7}
+  .btn:hover{filter:brightness(1.08)}
+  .hint{font-size:.7rem;color:#96a3b5;margin-top:10px;line-height:1.4}
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1>1. Sprites Individuales</h1>
+    <label>Base (ej. 1.png sin pelo)</label>
+    <input type="file" id="baseFile" accept="image/*">
+    <label>Peluca(s) individuales (ej. 1.5.png, puedes elegir varias)</label>
+    <input type="file" id="wigFiles" accept="image/*" multiple>
+    <label>Pelucas cargadas (clic para editar)</label>
+    <div id="wigList"></div>
+    <p class="hint">Ya no corta en 4×4: carga cada imagen como una peluca completa y le quita el fondo verde automáticamente.</p>
+  </div>
+
+  <div class="panel" style="max-width:none">
+    <h1>2. Vista Previa (Flechas = mover 1px)</h1>
+    <div id="stageWrap">
+      <div id="stage">
+        <canvas id="previewCanvas"></canvas>
+      </div>
+    </div>
+    <p class="hint" id="resInfo" style="text-align:center">Carga Base (1.png) y la peluca (1.5.png).</p>
+  </div>
+
+  <div class="panel">
+    <h1>3. Calibración Exacta</h1>
+    <label>Posición X (px)</label>
+    <div class="row"><input type="range" id="sx" min="-128" max="128" value="0"><span id="sxv">0</span></div>
+    <label>Posición Y (px)</label>
+    <div class="row"><input type="range" id="sy" min="-168" max="168" value="0"><span id="syv">0</span></div>
+    <label>Escala</label>
+    <div class="row"><input type="range" id="ss" min="30" max="180" value="100"><span id="ssv">100%</span></div>
+    <label>Umbral Verde (Chroma Key)</label>
+    <div class="row"><input type="range" id="tol" min="10" max="180" value="60"><span id="tolv">60</span></div>
+
+    <button class="btn sec" id="applyAllBtn">Aplicar este X/Y/Escala a todas</button>
+    <button class="btn sec" id="resetBtn">Reiniciar peluca actual</button>
+    <button class="btn" id="downloadBtn">Descargar esta peluca (PNG)</button>
+    <button class="btn" style="background:#4ade80;color:#062814" id="downloadAllBtn">Descargar todas las pelucas (PNG)</button>
+  </div>
+
+<script>
+const baseFile = document.getElementById('baseFile');
+const wigFiles = document.getElementById('wigFiles');
+const wigList = document.getElementById('wigList');
+const stage = document.getElementById('stage');
+const previewCanvas = document.getElementById('previewCanvas');
+const pCtx = previewCanvas.getContext('2d');
+const resInfo = document.getElementById('resInfo');
+
+const sx = document.getElementById('sx'), sy = document.getElementById('sy'), ss = document.getElementById('ss');
+const tol = document.getElementById('tol');
+const sxv = document.getElementById('sxv'), syv = document.getElementById('syv'), ssv = document.getElementById('ssv');
+const tolv = document.getElementById('tolv');
+
+let baseImgObj = null;
+let wigs = []; // { name, rawImg, canvas, x, y, scale, edited }
+let currentIdx = 0;
+
+function readAsImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+baseFile.addEventListener('change', async () => {
+  if (!baseFile.files[0]) return;
+  baseImgObj = await readAsImage(baseFile.files[0]);
+  const W = baseImgObj.naturalWidth, H = baseImgObj.naturalHeight;
+  previewCanvas.width = W;
+  previewCanvas.height = H;
+
+  sx.min = -W; sx.max = W;
+  sy.min = -H; sy.max = H;
+  resInfo.textContent = `Resolución nativa Base: ${W} × ${H} px`;
+
+  const maxDim = 420;
+  const ratio = Math.min(maxDim / W, maxDim / H);
+  stage.style.width = Math.round(W * ratio) + 'px';
+  stage.style.height = Math.round(H * ratio) + 'px';
+  renderPreview();
+});
+
+function buildCleanWigCanvas(img, threshold) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0);
+
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const px = imgData.data;
+
+  for (let i = 0; i < px.length; i += 4) {
+    let r = px[i], g = px[i+1], b = px[i+2];
+    const maxRB = Math.max(r, b);
+    const greenExcess = g - maxRB;
+
+    if (greenExcess > threshold) {
+      px[i+3] = 0;
+    } else if (greenExcess > 0) {
+      px[i+1] = maxRB; // Despill verde
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas;
+}
+
+function rebuildAllWigs() {
+  const threshold = +tol.value;
+  wigList.innerHTML = '';
+  wigs.forEach((item, idx) => {
+    item.canvas = buildCleanWigCanvas(item.rawImg, threshold);
+    const btn = document.createElement('button');
+    if (item.edited) btn.classList.add('edited');
+    if (idx === currentIdx) btn.classList.add('sel');
+    btn.title = item.name;
+    const thumb = document.createElement('img');
+    thumb.src = item.canvas.toDataURL();
+    btn.appendChild(thumb);
+    btn.onclick = () => selectWig(idx);
+    wigList.appendChild(btn);
+  });
+  renderPreview();
+}
+
+wigFiles.addEventListener('change', async () => {
+  if (!wigFiles.files.length) return;
+  wigs = [];
+  for (const file of wigFiles.files) {
+    const img = await readAsImage(file);
+    wigs.push({
+      name: file.name.replace(/\.[^.]+$/, ''),
+      rawImg: img,
+      canvas: null,
+      x: 0,
+      y: 0,
+      scale: 100,
+      edited: false
+    });
+  }
+  currentIdx = 0;
+  rebuildAllWigs();
+  selectWig(0);
+});
+
+tol.addEventListener('input', () => {
+  tolv.textContent = tol.value;
+  rebuildAllWigs();
+});
+
+function selectWig(idx) {
+  if (!wigs[idx]) return;
+  currentIdx = idx;
+  const item = wigs[idx];
+  sx.value = item.x; sy.value = item.y; ss.value = item.scale;
+  [...wigList.children].forEach((b, i) => b.classList.toggle('sel', i === idx));
+  renderPreview();
+}
+
+function updateCurrentWig() {
+  if (!wigs[currentIdx]) return;
+  const item = wigs[currentIdx];
+  item.x = +sx.value;
+  item.y = +sy.value;
+  item.scale = +ss.value;
+  item.edited = true;
+  wigList.children[currentIdx]?.classList.add('edited');
+  renderPreview();
+}
+
+[sx, sy, ss].forEach(el => el.addEventListener('input', updateCurrentWig));
+
+function drawWigOnCanvas(ctx, W, H, item) {
+  ctx.imageSmoothingEnabled = false;
+  const wig = item.canvas;
+  const fit = Math.min(W / wig.width, H / wig.height);
+  const scale = item.scale / 100;
+  const drawW = Math.round(wig.width * fit * scale);
+  const drawH = Math.round(wig.height * fit * scale);
+  const cx = Math.round(W / 2 + item.x);
+  const cy = Math.round(H / 2 + item.y);
+  ctx.drawImage(wig, Math.round(cx - drawW / 2), Math.round(cy - drawH / 2), drawW, drawH);
+}
+
+function renderPreview() {
+  sxv.textContent = sx.value;
+  syv.textContent = sy.value;
+  ssv.textContent = ss.value + '%';
+
+  const W = previewCanvas.width, H = previewCanvas.height;
+  pCtx.imageSmoothingEnabled = false;
+  pCtx.clearRect(0, 0, W, H);
+  if (baseImgObj) {
+    pCtx.drawImage(baseImgObj, 0, 0, W, H);
+  }
+  if (wigs[currentIdx] && wigs[currentIdx].canvas) {
+    drawWigOnCanvas(pCtx, W, H, wigs[currentIdx]);
+  }
+}
+
+window.addEventListener('keydown', (e) => {
+  if (!wigs[currentIdx]) return;
+  const step = e.shiftKey ? 4 : 1;
+  if (e.key === 'ArrowLeft') { sx.value = +sx.value - step; updateCurrentWig(); e.preventDefault(); }
+  if (e.key === 'ArrowRight') { sx.value = +sx.value + step; updateCurrentWig(); e.preventDefault(); }
+  if (e.key === 'ArrowUp') { sy.value = +sy.value - step; updateCurrentWig(); e.preventDefault(); }
+  if (e.key === 'ArrowDown') { sy.value = +sy.value + step; updateCurrentWig(); e.preventDefault(); }
+});
+
+document.getElementById('applyAllBtn').onclick = () => {
+  wigs.forEach((item, i) => {
+    item.x = +sx.value; item.y = +sy.value; item.scale = +ss.value; item.edited = true;
+    wigList.children[i]?.classList.add('edited');
+  });
+  renderPreview();
+};
+
+document.getElementById('resetBtn').onclick = () => {
+  sx.value = 0; sy.value = 0; ss.value = 100;
+  updateCurrentWig();
+};
+
+function exportSingle(idx) {
+  const W = baseImgObj ? baseImgObj.naturalWidth : 128;
+  const H = baseImgObj ? baseImgObj.naturalHeight : 168;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  drawWigOnCanvas(ctx, W, H, wigs[idx]);
+  const a = document.createElement('a');
+  a.download = `${wigs[idx].name}_calibrado.png`;
+  a.href = out.toDataURL('image/png');
+  a.click();
+}
+
+document.getElementById('downloadBtn').onclick = () => {
+  if (wigs[currentIdx]) exportSingle(currentIdx);
+};
+
+document.getElementById('downloadAllBtn').onclick = () => {
+  wigs.forEach((_, idx) => {
+    setTimeout(() => exportSingle(idx), idx * 180);
+  });
+};
+</script>
+</body>
+</html>
