@@ -256,7 +256,17 @@ function makeToken(t) {
   const b = document.createElement('button'); b.type = 'button'; b.draggable = t.type !== 'treasure';
   b.className = `token token-${t.type}${t.ap ? ' sprite-token' : ''}${state.selectedId === t.id ? ' selected' : ''}`;
   b.title = `${t.name} · Vida ${t.hp}/${t.maxHp}`; b.dataset.id = t.id; b.setAttribute('aria-label', esc(t.name));
-  if (t.ap) b.innerHTML = tokenSprite(t.ap, 42); else b.textContent = t.label.slice(0, 3);
+  if (t.ap) {
+    b.innerHTML = tokenSprite(t.ap, 42);
+  } else if (t.id === 'goblin') {
+    b.innerHTML = '<img src="tex/tokens/goblin.png" style="width:100%;height:100%;border-radius:50%;display:block" alt="Goblin">';
+  } else if (t.id === 'wolf') {
+    b.innerHTML = '<img src="tex/tokens/wolf.png" style="width:100%;height:100%;border-radius:50%;display:block" alt="Lobo">';
+  } else if (t.id === 'chest' || t.type === 'treasure') {
+    b.innerHTML = '<img src="tex/tokens/chest.png" style="width:100%;height:100%;border-radius:50%;display:block" alt="Tesoro">';
+  } else {
+    b.textContent = t.label.slice(0, 3);
+  }
   if (t.type !== 'treasure') {
     b.addEventListener('dragstart', e => { if (t.id !== 'pj' || state.phase !== 'Exploración') { e.preventDefault(); return; } state.draggedId = t.id; e.dataTransfer.setData('text/plain', t.id); b.classList.add('dragging'); status('Arrastra a una baldosa iluminada.', 'success'); });
     b.addEventListener('dragend', () => { state.draggedId = null; b.classList.remove('dragging'); $$('.bad-target').forEach(c => c.classList.remove('bad-target')); });
@@ -499,7 +509,9 @@ function renderEncounter() {
   const el = $('#encounterRows'); if (!el) return;
   el.innerHTML = enemies.length ? enemies.map(e => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:0.75rem">
-      <span style="width:28px;height:28px;border-radius:50%;background:var(--crimson);color:#fff;display:grid;place-items:center;font-weight:bold">${esc(e.label)}</span>
+      <span style="width:30px;height:30px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--crimson);border:1px solid #ff9494">
+        ${e.id === 'goblin' ? '<img src="tex/tokens/goblin.png" style="width:100%;height:100%" alt="Goblin">' : e.id === 'wolf' ? '<img src="tex/tokens/wolf.png" style="width:100%;height:100%" alt="Lobo">' : `<b style="color:#fff">${esc(e.label)}</b>`}
+      </span>
       <div style="flex:1"><strong>${esc(e.name)}</strong><span style="display:block;color:var(--muted)">Vida ${e.hp}/${e.maxHp} · CA ${e.defense}</span></div>
       <b style="color:var(--crimson)">Hostil</b>
     </div>
