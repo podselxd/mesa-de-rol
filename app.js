@@ -109,16 +109,30 @@ function generateMapGrid(biomeKey, seed) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const rng = mulberry32(seed + attempt * 7919);
     const grid = {};
-    for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) grid[mk(x, y)] = { ground: pickRng(rng, biome.ground), prop: null, wall: false, hazard: false };
 
-    const zones = 1 + Math.floor(rng() * 2);
-    for (let z = 0; z < zones; z++) {
-      const zw = 3 + Math.floor(rng() * 4), zh = 2 + Math.floor(rng() * 3);
-      const zx = 2 + Math.floor(rng() * Math.max(1, BOARD_W - zw - 2)), zy = 2 + Math.floor(rng() * Math.max(1, BOARD_H - zh - 2));
-      const altTile = pickRng(rng, biome.altGround || biome.ground);
-      for (let y = zy; y < zy + zh; y++) for (let x = zx; x < zx + zw; x++) if (x >= 1 && x <= BOARD_W && y >= 1 && y <= BOARD_H) grid[mk(x, y)].ground = altTile;
+    // Pasada 1: autómata celular (vecindad de Moore) para colapsar ruido en parches conexos de 2 tipos de piso
+    let state0 = {};
+    for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) state0[mk(x, y)] = rng() < 0.75 ? 0 : 1;
+    for (let iter = 0; iter < 2; iter++) {
+      const next = {};
+      for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) {
+        let altCount = 0, total = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 1 || nx > BOARD_W || ny < 1 || ny > BOARD_H) continue;
+          total++; if (state0[mk(nx, ny)] === 1) altCount++;
+        }
+        next[mk(x, y)] = altCount >= Math.ceil(total / 2) ? 1 : 0;
+      }
+      state0 = next;
+    }
+    const altTile = pickRng(rng, biome.altGround || biome.ground);
+    for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) {
+      const k = mk(x, y);
+      grid[k] = { ground: state0[k] === 1 ? altTile : pickRng(rng, biome.ground), prop: null, wall: false, hazard: false };
     }
 
+    // Pasada 2: marco perimetral de muros con un hueco de entrada
     const gapSide = Math.floor(rng() * 4), gapAt = 3 + Math.floor(rng() * (BOARD_W - 6));
     for (let x = 1; x <= BOARD_W; x++) {
       if (!(gapSide === 0 && x === gapAt)) { grid[mk(x, 1)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
@@ -129,16 +143,16 @@ function generateMapGrid(biomeKey, seed) {
       if (!(gapSide === 3 && y === gapAt)) { grid[mk(BOARD_W, y)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
     }
 
+    // Pasada 3: hidrografía/peligros como un recorrido aleatorio contiguo (longitud 4-7)
     if (biome.hazard) {
-      let hx = 3 + Math.floor(rng() * (BOARD_W - 5)), hy = 3 + Math.floor(rng() * (BOARD_H - 5));
-      const hazardSize = 4 + Math.floor(rng() * 4);
-      const seen = new Set(); const queue = [[hx, hy]];
-      while (queue.length && seen.size < hazardSize) {
-        const [cx, cy] = queue.shift(), k = mk(cx, cy);
-        if (seen.has(k) || cx < 2 || cx > BOARD_W - 1 || cy < 2 || cy > BOARD_H - 1 || grid[k].wall) continue;
-        seen.add(k);
-        grid[k] = { ground: pickRng(rng, biome.hazardTiles), prop: null, wall: true, hazard: true };
-        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { if (rng() < 0.6) queue.push([cx + dx, cy + dy]); });
+      let cx = 3 + Math.floor(rng() * (BOARD_W - 5)), cy = 3 + Math.floor(rng() * (BOARD_H - 5));
+      const steps = 4 + Math.floor(rng() * 4);
+      for (let i = 0; i < steps; i++) {
+        const k = mk(cx, cy);
+        if (!grid[k].wall) grid[k] = { ground: pickRng(rng, biome.hazardTiles), prop: null, wall: true, hazard: true };
+        const [dx, dy] = pickRng(rng, [[1, 0], [-1, 0], [0, 1], [0, -1]]);
+        const nx = Math.min(BOARD_W - 1, Math.max(2, cx + dx)), ny = Math.min(BOARD_H - 1, Math.max(2, cy + dy));
+        cx = nx; cy = ny;
       }
     }
 
@@ -283,6 +297,7 @@ function renderBoard(previewGrid) {
   board.classList.toggle('no-grid', !state.gridVisible);
   board.replaceChildren();
   const mapGrid = previewGrid || pendingMap?.grid || state.mapTiles;
+  board.classList.toggle('textured', !!mapGrid);
   const p = currentPlayer();
   for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) {
     const cell = document.createElement('div'), mapCell = mapGrid?.[key(x, y)];

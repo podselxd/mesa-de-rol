@@ -307,6 +307,9 @@ h3 { font-family: var(--font-dnd); font-size: 0.9rem; color: var(--text-gold); }
 }
 .board.no-grid { gap: 0; }
 .board.no-grid .cell { border-color: transparent; }
+.board.textured { gap: 0; }
+.board.textured .cell { border-radius: 0; border: 1px solid rgba(255,255,255,0.07); background: none; }
+.board.textured .cell.blocked { opacity: 1; }
 .cell {
   position: relative;
   display: grid;
