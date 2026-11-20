@@ -5,6 +5,176 @@ const mod = v => Math.floor((v - 10) / 2);
 const sg = n => (n >= 0 ? '+' : '') + n;
 const BOARD_W = 12, BOARD_H = 8;
 
+// ---- Generador procedural de mapas (atlas de texturas 9 columnas) ----
+const TILE_SHEETS = {
+  ground: { url: 'tex/maps/atlas/ground.webp', cols: 9, rows: 5 },
+  hazard: { url: 'tex/maps/atlas/hazard.webp', cols: 9, rows: 5 },
+  props: { url: 'tex/maps/atlas/props.webp', cols: 9, rows: 5 },
+  walls: { url: 'tex/maps/atlas/walls.webp', cols: 9, rows: 10 }
+};
+const TILE_CATALOG = {
+  ground: [
+    { col: 0, row: 0, name: 'Pasto' }, { col: 2, row: 0, name: 'Pasto claro' }, { col: 3, row: 0, name: 'Adoquín musgoso' },
+    { col: 0, row: 1, name: 'Pasto medio' }, { col: 2, row: 1, name: 'Pasto oscuro' }, { col: 5, row: 1, name: 'Tierra' }, { col: 7, row: 1, name: 'Lodo' },
+    { col: 0, row: 2, name: 'Grava' }, { col: 3, row: 2, name: 'Arena' }, { col: 6, row: 2, name: 'Arena fina' },
+    { col: 0, row: 3, name: 'Adoquín' }, { col: 4, row: 3, name: 'Losa tallada' }, { col: 6, row: 3, name: 'Ladrillo de piedra' },
+    { col: 0, row: 4, name: 'Madera' }, { col: 3, row: 4, name: 'Madera espiga' }, { col: 6, row: 4, name: 'Alfombra' }, { col: 7, row: 4, name: 'Alfombra roja' }
+  ],
+  hazard: [
+    { col: 0, row: 0, name: 'Estanque' }, { col: 1, row: 0, name: 'Arroyo' },
+    { col: 0, row: 1, name: 'Lava' }, { col: 1, row: 1, name: 'Lava rocosa' }, { col: 2, row: 1, name: 'Ácido' },
+    { col: 0, row: 3, name: 'Río' }, { col: 1, row: 3, name: 'Río de lava' },
+    { col: 1, row: 4, name: 'Ácido burbujeante' }, { col: 3, row: 4, name: 'Lava burbujeante' }
+  ],
+  props: [
+    { col: 2, row: 0, name: 'Arbusto', blocking: true }, { col: 3, row: 0, name: 'Tocón', blocking: true }, { col: 5, row: 0, name: 'Arbustos', blocking: true }, { col: 7, row: 0, name: 'Flores rosas', blocking: false },
+    { col: 0, row: 1, name: 'Rocas', blocking: true }, { col: 1, row: 1, name: 'Rocas musgosas', blocking: true }, { col: 2, row: 1, name: 'Hongos rojos', blocking: false }, { col: 3, row: 1, name: 'Hongos brillantes', blocking: false }, { col: 6, row: 1, name: 'Flores moradas', blocking: false },
+    { col: 6, row: 2, name: 'Ramitas', blocking: false }, { col: 7, row: 2, name: 'Roca suelta', blocking: true },
+    { col: 5, row: 3, name: 'Árbol muerto', blocking: true }, { col: 6, row: 3, name: 'Hongo gigante', blocking: true }, { col: 7, row: 3, name: 'Hongos rosas', blocking: false },
+    { col: 2, row: 4, name: 'Ramas', blocking: false }, { col: 3, row: 4, name: 'Piñas', blocking: false }, { col: 4, row: 4, name: 'Flores silvestres', blocking: false }, { col: 7, row: 4, name: 'Matorral', blocking: true }
+  ],
+  walls: [
+    { col: 0, row: 0, name: 'Muro de piedra' }, { col: 2, row: 0, name: 'Muro de piedra II' }, { col: 6, row: 0, name: 'Muro rocoso' },
+    { col: 0, row: 2, name: 'Muro de ladrillo' }, { col: 6, row: 2, name: 'Muro dañado' },
+    { col: 0, row: 4, name: 'Muro con rejas' }, { col: 3, row: 4, name: 'Muro con rejas II' },
+    { col: 4, row: 5, name: 'Ribera de arena' }, { col: 6, row: 5, name: 'Ribera con pasto' }
+  ]
+};
+function byName(sheet, ...names) { return TILE_CATALOG[sheet].filter(t => names.includes(t.name)).map(t => ({ sheet, ...t })); }
+const BIOME_PRESETS = {
+  taberna: {
+    label: 'Taberna / Pueblo',
+    ground: byName('ground', 'Madera', 'Madera espiga', 'Alfombra', 'Alfombra roja'),
+    altGround: byName('ground', 'Adoquín', 'Losa tallada'),
+    wall: byName('walls', 'Muro de ladrillo')[0],
+    hazard: false,
+    props: byName('props', 'Flores rosas'),
+    propDensity: 2
+  },
+  bosque: {
+    label: 'Bosque',
+    ground: byName('ground', 'Pasto', 'Pasto claro', 'Pasto medio', 'Pasto oscuro'),
+    altGround: byName('ground', 'Tierra', 'Grava'),
+    wall: byName('walls', 'Ribera con pasto')[0],
+    hazard: true,
+    hazardTiles: byName('hazard', 'Estanque', 'Arroyo'),
+    props: byName('props', 'Arbusto', 'Tocón', 'Arbustos', 'Rocas', 'Rocas musgosas', 'Hongos rojos', 'Flores moradas', 'Flores silvestres'),
+    propDensity: 9
+  },
+  mazmorra: {
+    label: 'Mazmorra',
+    ground: byName('ground', 'Adoquín', 'Losa tallada', 'Ladrillo de piedra'),
+    altGround: byName('ground', 'Adoquín musgoso'),
+    wall: byName('walls', 'Muro con rejas')[0],
+    hazard: false,
+    props: byName('props', 'Roca suelta', 'Hongos brillantes'),
+    propDensity: 7
+  },
+  volcan: {
+    label: 'Volcánico / Pantano',
+    ground: byName('ground', 'Tierra', 'Lodo'),
+    altGround: byName('ground', 'Grava'),
+    wall: byName('walls', 'Muro rocoso')[0],
+    hazard: true,
+    hazardTiles: byName('hazard', 'Lava', 'Lava rocosa', 'Ácido', 'Río de lava', 'Ácido burbujeante', 'Lava burbujeante'),
+    props: byName('props', 'Rocas', 'Rocas musgosas', 'Árbol muerto'),
+    propDensity: 6
+  }
+};
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function pickRng(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+function tileBgCss(tileRef) {
+  if (!tileRef) return null;
+  const sheet = TILE_SHEETS[tileRef.sheet];
+  const posX = sheet.cols > 1 ? (tileRef.col / (sheet.cols - 1)) * 100 : 0;
+  const posY = sheet.rows > 1 ? (tileRef.row / (sheet.rows - 1)) * 100 : 0;
+  return {
+    backgroundImage: `url(${sheet.url})`,
+    backgroundSize: `${sheet.cols * 100}% ${sheet.rows * 100}%`,
+    backgroundPosition: `${posX}% ${posY}%`,
+    backgroundRepeat: 'no-repeat'
+  };
+}
+function generateMapGrid(biomeKey, seed) {
+  const biome = BIOME_PRESETS[biomeKey];
+  const mk = (x, y) => `${x},${y}`;
+  let best = null;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const rng = mulberry32(seed + attempt * 7919);
+    const grid = {};
+    for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) grid[mk(x, y)] = { ground: pickRng(rng, biome.ground), prop: null, wall: false, hazard: false };
+
+    const zones = 1 + Math.floor(rng() * 2);
+    for (let z = 0; z < zones; z++) {
+      const zw = 3 + Math.floor(rng() * 4), zh = 2 + Math.floor(rng() * 3);
+      const zx = 2 + Math.floor(rng() * Math.max(1, BOARD_W - zw - 2)), zy = 2 + Math.floor(rng() * Math.max(1, BOARD_H - zh - 2));
+      const altTile = pickRng(rng, biome.altGround || biome.ground);
+      for (let y = zy; y < zy + zh; y++) for (let x = zx; x < zx + zw; x++) if (x >= 1 && x <= BOARD_W && y >= 1 && y <= BOARD_H) grid[mk(x, y)].ground = altTile;
+    }
+
+    const gapSide = Math.floor(rng() * 4), gapAt = 3 + Math.floor(rng() * (BOARD_W - 6));
+    for (let x = 1; x <= BOARD_W; x++) {
+      if (!(gapSide === 0 && x === gapAt)) { grid[mk(x, 1)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
+      if (!(gapSide === 1 && x === gapAt)) { grid[mk(x, BOARD_H)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
+    }
+    for (let y = 1; y <= BOARD_H; y++) {
+      if (!(gapSide === 2 && y === gapAt)) { grid[mk(1, y)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
+      if (!(gapSide === 3 && y === gapAt)) { grid[mk(BOARD_W, y)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
+    }
+
+    if (biome.hazard) {
+      let hx = 3 + Math.floor(rng() * (BOARD_W - 5)), hy = 3 + Math.floor(rng() * (BOARD_H - 5));
+      const hazardSize = 4 + Math.floor(rng() * 4);
+      const seen = new Set(); const queue = [[hx, hy]];
+      while (queue.length && seen.size < hazardSize) {
+        const [cx, cy] = queue.shift(), k = mk(cx, cy);
+        if (seen.has(k) || cx < 2 || cx > BOARD_W - 1 || cy < 2 || cy > BOARD_H - 1 || grid[k].wall) continue;
+        seen.add(k);
+        grid[k] = { ground: pickRng(rng, biome.hazardTiles), prop: null, wall: true, hazard: true };
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { if (rng() < 0.6) queue.push([cx + dx, cy + dy]); });
+      }
+    }
+
+    let placed = 0, guard = 0;
+    while (placed < (biome.propDensity || 6) && guard < 200) {
+      guard++;
+      const x = 1 + Math.floor(rng() * BOARD_W), y = 1 + Math.floor(rng() * BOARD_H), c = grid[mk(x, y)];
+      if (c.wall || c.prop) continue;
+      const propTile = pickRng(rng, biome.props);
+      c.prop = propTile;
+      if (propTile.blocking) c.wall = true;
+      placed++;
+    }
+
+    let start = null;
+    for (let y = 1; y <= BOARD_H && !start; y++) for (let x = 1; x <= BOARD_W && !start; x++) if (!grid[mk(x, y)].wall) start = [x, y];
+    const totalOpen = Object.values(grid).filter(c => !c.wall).length;
+    const seenBfs = new Set(); const q = start ? [start] : [];
+    while (q.length) {
+      const [cx, cy] = q.shift(), k = mk(cx, cy);
+      if (seenBfs.has(k) || cx < 1 || cx > BOARD_W || cy < 1 || cy > BOARD_H || grid[k].wall) continue;
+      seenBfs.add(k);
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => q.push([cx + dx, cy + dy]));
+    }
+    best = { grid, biomeKey, seed };
+    if (totalOpen === 0 || seenBfs.size >= totalOpen * 0.9) return best;
+  }
+  // Último intento no conectó bien: quitamos props/peligros y dejamos solo el marco de muros (siempre transitable por dentro)
+  const rng = mulberry32(seed);
+  const grid = {};
+  for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) grid[mk(x, y)] = { ground: pickRng(rng, biome.ground), prop: null, wall: false, hazard: false };
+  for (let x = 1; x <= BOARD_W; x++) { grid[mk(x, 1)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; grid[mk(x, BOARD_H)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
+  for (let y = 1; y <= BOARD_H; y++) { grid[mk(1, y)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; grid[mk(BOARD_W, y)] = { ground: biome.wall, prop: null, wall: true, hazard: false }; }
+  return { grid, biomeKey, seed };
+}
+
 // ---- Clases y especies (D&D SRD 5.1 simplificado) ----
 const ST = ['Fue', 'Des', 'Con', 'Int', 'Sab', 'Car'];
 const CL = {
@@ -48,7 +218,7 @@ function build(d) {
 const blocked = new Set(['4,1', '4,2', '4,3', '9,1', '9,2', '9,3', '9,4', '2,4', '3,4']);
 const defaultState = {
   round: 1, phase: 'Exploración', gridVisible: true, mode: 'none', selectedId: null, draggedId: null,
-  chMeta: null,
+  chMeta: null, mapTiles: null, mapBiome: null,
   tokens: [
     { id: 'goblin', name: 'Goblin explorador', label: 'G', type: 'enemy', x: 8, y: 2, hp: 7, maxHp: 7, defense: 13, attackBonus: 3, damage: '1d6+1', acted: false },
     { id: 'wolf', name: 'Lobo gris', label: 'L', type: 'enemy', x: 10, y: 5, hp: 11, maxHp: 11, defense: 12, attackBonus: 4, damage: '1d6+2', acted: false },
@@ -95,8 +265,11 @@ function rollDamage(expr) {
 function distance(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
 function adjacent(a, b) { return distance(a, b) <= 1; }
 
+function isBlockedCell(x, y) {
+  return state.mapTiles ? !!state.mapTiles[key(x, y)]?.wall : blocked.has(key(x, y));
+}
 function validCell(x, y, id) {
-  if (x < 1 || x > BOARD_W || y < 1 || y > BOARD_H || blocked.has(key(x, y))) return false;
+  if (x < 1 || x > BOARD_W || y < 1 || y > BOARD_H || isBlockedCell(x, y)) return false;
   const occupant = tokenAt(x, y);
   if (occupant && occupant.id !== id) {
     if (id === 'pj' && occupant.type === 'treasure') return true;
@@ -105,14 +278,23 @@ function validCell(x, y, id) {
   return true;
 }
 
-function renderBoard() {
+function renderBoard(previewGrid) {
   const board = $('#board'); if (!board) return;
   board.classList.toggle('no-grid', !state.gridVisible);
   board.replaceChildren();
+  const mapGrid = previewGrid || pendingMap?.grid || state.mapTiles;
   const p = currentPlayer();
   for (let y = 1; y <= BOARD_H; y++) for (let x = 1; x <= BOARD_W; x++) {
-    const cell = document.createElement('div'), blockedCell = blocked.has(key(x, y)), t = tokenAt(x, y);
+    const cell = document.createElement('div'), mapCell = mapGrid?.[key(x, y)];
+    const blockedCell = mapGrid ? !!mapCell?.wall : blocked.has(key(x, y));
+    const t = tokenAt(x, y);
     cell.className = `cell${blockedCell ? ' blocked' : ''}`; cell.dataset.x = x; cell.dataset.y = y; cell.dataset.coord = `${x},${y}`; cell.setAttribute('role', 'gridcell');
+    if (mapCell?.ground) Object.assign(cell.style, tileBgCss(mapCell.ground));
+    if (mapCell?.prop) {
+      const propEl = document.createElement('div'); propEl.className = 'cell-prop';
+      Object.assign(propEl.style, tileBgCss(mapCell.prop));
+      cell.append(propEl);
+    }
     if (!blockedCell) { cell.addEventListener('dragover', onDragOver); cell.addEventListener('dragleave', onDragLeave); cell.addEventListener('drop', onDrop); cell.addEventListener('click', () => cellClick(x, y)); }
     if (p && state.mode === 'move' && !blockedCell && validCell(x, y, 'pj') && (!t || t.type === 'treasure')) cell.classList.add('drop-target');
     if (t) cell.append(makeToken(t));
@@ -504,7 +686,7 @@ $('#entityForm')?.addEventListener('submit', e => {
   const def = Math.max(0, +($('#entityDef')?.value) || 12);
   const atkb = +($('#entityAtk')?.value) || 3;
   const dmg = ($('#entityDmg')?.value || '').trim() || '1d6+1';
-  if (!name || !label || blocked.has(key(x, y)) || tokenAt(x, y)) { toast('No se puede colocar en esa baldosa.'); return; }
+  if (!name || !label || isBlockedCell(x, y) || tokenAt(x, y)) { toast('No se puede colocar en esa baldosa.'); return; }
   snapshot();
   state.tokens.push({ id: `entity-${Date.now()}`, name, label, type, x, y, hp, maxHp: hp, defense: def, attackBonus: atkb, damage: dmg, acted: false });
   addLog(`<strong>${esc(name)}</strong> apareció en [${x},${y}].`);
@@ -527,6 +709,32 @@ $('#undoBtn')?.addEventListener('click', () => { const h = state.history.pop(); 
 $('#clearTokensBtn')?.addEventListener('click', () => { snapshot(); state.tokens = state.tokens.filter(t => ['pj','goblin','wolf','chest'].includes(t.id)); renderAll(); toast('Criaturas eliminadas.'); saved(); });
 $('#exportBtn')?.addEventListener('click', () => { const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `cronica-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); toast('Crónica exportada.'); });
 $('#helpBtn')?.addEventListener('click', () => toast('Mueve tu ficha a casillas libres, ataca enemigos adyacentes y concluye tu turno.'));
+
+// ---- Generador procedural de mapas (panel del DM) ----
+let pendingMap = null;
+function updateMapGeneratorUI() {
+  const banner = $('#mapPreviewBanner'); if (!banner) return;
+  banner.style.display = pendingMap ? 'flex' : 'none';
+  const label = $('#mapPreviewLabel');
+  if (label && pendingMap) label.textContent = `Vista previa: ${BIOME_PRESETS[pendingMap.biomeKey].label}`;
+}
+function previewBiome(biomeKey) {
+  pendingMap = generateMapGrid(biomeKey, Date.now());
+  renderBoard(pendingMap.grid);
+  updateMapGeneratorUI();
+}
+$$('.biome-btn').forEach(b => b.addEventListener('click', () => previewBiome(b.dataset.biome)));
+$('#mapRegenBtn')?.addEventListener('click', () => { if (pendingMap) previewBiome(pendingMap.biomeKey); });
+$('#mapDiscardBtn')?.addEventListener('click', () => { pendingMap = null; renderBoard(); updateMapGeneratorUI(); toast('Vista previa descartada.'); });
+$('#mapApplyBtn')?.addEventListener('click', () => {
+  if (!pendingMap) return;
+  const enCombate = state.mapTiles && (state.round > 1 || state.tokens.some(t => t.acted));
+  if (enCombate && !confirm('Ya hay un mapa activo y el combate está en curso. ¿Reemplazarlo de todas formas?')) return;
+  snapshot();
+  state.mapTiles = pendingMap.grid; state.mapBiome = pendingMap.biomeKey; pendingMap = null;
+  renderAll(); updateMapGeneratorUI(); saved();
+  toast('Mapa aplicado al tablero.');
+});
 
 // ---- LOCAL-FIRST SAVE (no Supabase email required) ----
 let saveTimer2;

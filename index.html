@@ -327,6 +327,14 @@ h3 { font-family: var(--font-dnd); font-size: 0.9rem; color: var(--text-gold); }
   font-family: var(--font-dnd);
   pointer-events: none;
 }
+.cell-prop {
+  position: absolute;
+  inset: 14%;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+}
 .cell.blocked {
   background: repeating-linear-gradient(135deg, #0f131a, #0f131a 8px, #1a222e 8px, #1a222e 16px);
   border-color: #171d27;
@@ -767,6 +775,14 @@ h3 { font-family: var(--font-dnd); font-size: 0.9rem; color: var(--text-gold); }
                 <span style="display:flex;align-items:center;gap:5px"><i style="width:8px;height:8px;border-radius:2px;background:var(--gold);display:inline-block"></i>Cofre</span>
               </div>
             </div>
+            <div id="mapPreviewBanner" style="display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#241a08;border:1px solid var(--gold);border-radius:8px;padding:8px 12px;margin-bottom:10px">
+              <span id="mapPreviewLabel" style="font-size:0.8rem;color:var(--gold-bright)">Vista previa</span>
+              <div style="display:flex;gap:8px">
+                <button type="button" class="btn ghost" id="mapRegenBtn">🎲 Regenerar</button>
+                <button type="button" class="btn ghost" id="mapDiscardBtn">Descartar</button>
+                <button type="button" class="btn primary" id="mapApplyBtn">Usar este mapa</button>
+              </div>
+            </div>
             <div id="board" class="board" role="grid" aria-label="Tablero táctico"></div>
             <div id="boardStatus" style="margin-top:12px;min-height:22px;color:var(--text-muted);font-size:0.8rem">Selecciona una ficha para ver sus acciones.</div>
           </section>
@@ -948,6 +964,19 @@ h3 { font-family: var(--font-dnd); font-size: 0.9rem; color: var(--text-gold); }
               <button class="btn ghost" id="clearTokensBtn">⌫ Eliminar Monstruos Secundarios</button>
               <button class="btn ghost" id="exportBtn">⇩ Exportar Estado (JSON)</button>
               <button class="btn danger" id="restartGameBtn">⚠ Reiniciar Aventura Completa</button>
+            </div>
+          </section>
+
+          <section class="panel" style="padding:20px;grid-column:1 / -1">
+            <div class="panel-head">
+              <h2>Generador de Mapa</h2>
+              <span style="font-size:0.75rem;color:var(--text-muted)">Elige un bioma, revisa la vista previa en el tablero y aplícalo cuando te guste.</span>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button type="button" class="btn ghost biome-btn" data-biome="taberna">🍺 Taberna / Pueblo</button>
+              <button type="button" class="btn ghost biome-btn" data-biome="bosque">🌲 Bosque</button>
+              <button type="button" class="btn ghost biome-btn" data-biome="mazmorra">🏰 Mazmorra</button>
+              <button type="button" class="btn ghost biome-btn" data-biome="volcan">🌋 Volcánico / Pantano</button>
             </div>
           </section>
         </div>
