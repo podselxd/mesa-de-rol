@@ -1,0 +1,746 @@
+{
+  "pelo_hombre_1": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_10": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_10_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_11": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_11_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_12": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_12_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_13": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_13_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_14": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_14_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_15": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_15_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_16": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_16_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_17": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_17_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_18": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_18_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_19": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_19_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_1_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_2": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_20": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_20_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_21": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_21_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_22": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_22_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_23": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_23_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_24": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_24_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_25": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_25_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_26": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_26_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_27": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_27_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_28": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_28_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_29": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_29_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_2_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_3": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_30": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_30_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_31": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_31_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_32": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_32_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_3_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_4": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_4_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_5": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_5_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_6": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_6_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_7": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_7_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_8": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_8_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_hombre_9": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_hombre_9_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_1": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_10": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_10_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_11": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_11_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_12": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_12_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_13": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_13_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_14": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_14_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_15": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_15_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_16": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_16_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_17": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_17_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_18": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_18_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_19": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_19_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_1_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_2": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_20": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_20_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_21": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_21_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_22": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_22_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_23": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_23_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_24": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_24_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_25": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_25_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_26": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_26_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_27": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_27_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_28": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_28_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_29": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_29_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_2_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_3": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_30": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_30_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_3_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_4": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_4_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_5": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_5_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_6": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_6_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_7": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_7_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_8": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_8_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  },
+  "pelo_mujer_9": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "front"
+  },
+  "pelo_mujer_9_back": {
+    "x": 0,
+    "y": 0,
+    "scale": 1.0,
+    "layer": "back"
+  }
+}
